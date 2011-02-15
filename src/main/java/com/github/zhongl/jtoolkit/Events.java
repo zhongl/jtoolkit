@@ -10,11 +10,12 @@ import java.util.concurrent.*;
  */
 public final class Events {
 
-  public static int eventsExecutorNum = Runtime.getRuntime().availableProcessors();
+  public static int executorNum = Runtime.getRuntime().availableProcessors();
+  public static int schedulerNum = 1;
 
   static {
-    EXECUTOR = Executors.newFixedThreadPool(eventsExecutorNum, new DebugableThreadFactory("events-executor", true));
-    SCHEDULER = Executors.newSingleThreadScheduledExecutor(new DebugableThreadFactory("events-scheduler", true));
+    EXECUTOR = Executors.newFixedThreadPool(executorNum, new DebugableThreadFactory("events-executor", true));
+    SCHEDULER = Executors.newScheduledThreadPool(schedulerNum, new DebugableThreadFactory("events-scheduler", true));
     final Thread shutdownEvents = new Thread(new Runnable() {
       @Override
       public void run() { dispose(); }
