@@ -1,11 +1,11 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
 import static java.lang.Thread.currentThread;
 
 import java.util.concurrent.Callable;
 
 /**
- * {@link cn.cafusic.jtoolkit.NamedThreadCallable} for debug.
+ * {@link NamedThreadCallable} for debug.
  *
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2010-11-12

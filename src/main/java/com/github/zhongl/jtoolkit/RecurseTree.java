@@ -1,4 +1,4 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
 import java.util.Collections;
 import java.util.Iterator;

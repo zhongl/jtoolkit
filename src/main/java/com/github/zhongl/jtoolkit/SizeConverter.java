@@ -1,9 +1,9 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
-import cn.cafusic.jtoolkit.PropertiesHelper.Converter;
+import com.github.zhongl.jtoolkit.PropertiesHelper.Converter;
 
 /**
- * {@link cn.cafusic.jtoolkit.SizeConverter}
+ * {@link SizeConverter}
  *
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2010-12-23

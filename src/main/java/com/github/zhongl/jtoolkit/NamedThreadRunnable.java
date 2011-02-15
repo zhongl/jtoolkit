@@ -1,9 +1,9 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
 import static java.lang.Thread.currentThread;
 
 /**
- * {@link cn.cafusic.jtoolkit.NamedThreadRunnable} for debug.
+ * {@link NamedThreadRunnable} for debug.
  *
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2010-11-12

@@ -1,6 +1,6 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
-import static cn.cafusic.jtoolkit.NamedThreadCallable.named;
+import static com.github.zhongl.jtoolkit.NamedThreadCallable.named;
 import static java.util.concurrent.Executors.newFixedThreadPool;
 
 import java.util.ArrayList;
@@ -9,7 +9,7 @@ import java.util.List;
 import java.util.concurrent.*;
 
 /**
- * {@link cn.cafusic.jtoolkit.Race}
+ * {@link Race}
  *
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2010-11-11

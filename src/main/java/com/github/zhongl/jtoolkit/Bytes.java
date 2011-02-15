@@ -1,10 +1,10 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 
 /**
- * {@link cn.cafusic.jtoolkit.Bytes}
+ * {@link Bytes}
  *
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2010-11-8

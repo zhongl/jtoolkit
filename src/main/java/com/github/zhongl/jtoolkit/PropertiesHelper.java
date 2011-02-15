@@ -1,4 +1,4 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
 import static java.lang.Boolean.parseBoolean;
 import static java.lang.Integer.parseInt;

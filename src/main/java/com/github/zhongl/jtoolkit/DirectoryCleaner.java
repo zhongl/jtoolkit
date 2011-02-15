@@ -1,15 +1,12 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
 import java.io.File;
 import java.util.Arrays;
 import java.util.Iterator;
 
-import cn.cafusic.jtoolkit.RecurseTree.Callback;
-import cn.cafusic.jtoolkit.RecurseTree.IteratorFactory;
-
 
 /**
- * {@link cn.cafusic.jtoolkit.DirectoryCleaner}
+ * {@link DirectoryCleaner}
  *
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2010-12-3
@@ -22,7 +19,7 @@ public final class DirectoryCleaner {
 
   public static void clean(final String dir) { clean(new File(dir)); }
 
-  private final static IteratorFactory<File> FACTORY = new IteratorFactory<File>() {
+  private final static RecurseTree.IteratorFactory<File> FACTORY = new RecurseTree.IteratorFactory<File>() {
     @Override
     public Iterator<File> iterator(final File obj) {
       final Iterator<File> empty = RecurseTree.empty();
@@ -30,7 +27,7 @@ public final class DirectoryCleaner {
     }
   };
 
-  private final static Callback<File> CALLBACK = new Callback<File>() {
+  private final static RecurseTree.Callback<File> CALLBACK = new RecurseTree.Callback<File>() {
     @Override
     public void onCallback(final File obj) { obj.delete(); }
   };

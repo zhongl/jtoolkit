@@ -1,9 +1,9 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
 import java.util.concurrent.*;
 
 /**
- * {@link cn.cafusic.jtoolkit.Repository}
+ * {@link Repository}
  *
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2010-11-4

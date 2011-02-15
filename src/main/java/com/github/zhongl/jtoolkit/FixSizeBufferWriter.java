@@ -1,10 +1,10 @@
-package cn.cafusic.jtoolkit;
+package com.github.zhongl.jtoolkit;
 
 import java.io.IOException;
 import java.io.Writer;
 
 /**
- * {@link cn.cafusic.jtoolkit.FixSizeBufferWriter}
+ * {@link FixSizeBufferWriter}
  *
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2010-11-18

@@ -2,13 +2,27 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>cn.cafusic.jtoolkit</groupId>
+  <groupId>com.github.zhongl.jtoolkit</groupId>
   <artifactId>jtoolkit</artifactId>
   <version>1.0</version>
   <packaging>jar</packaging>
 
   <name>jtoolkit</name>
-  <url>http://maven.apache.org</url>
+  <url>https://github.com/zhongl/jtoolkit</url>
+
+  <build>
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>2.3.2</version>
+        <configuration>
+          <source>1.6</source>
+          <target>1.6</target>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
