@@ -1,5 +1,7 @@
 package com.github.zhongl.jtoolkit;
 
+import static java.util.concurrent.Executors.newScheduledThreadPool;
+
 import java.util.concurrent.*;
 
 /**
@@ -14,14 +16,19 @@ public final class Events {
   public static int schedulerNum = 1;
 
   static {
-    EXECUTOR = Executors.newFixedThreadPool(executorNum, new DebugableThreadFactory("events-executor", true));
-    SCHEDULER = Executors.newScheduledThreadPool(schedulerNum, new DebugableThreadFactory("events-scheduler", true));
+    EXECUTOR = newFixThreadPool(executorNum, new DebugableThreadFactory("events-executor", true));
+    SCHEDULER = newScheduledThreadPool(schedulerNum, new DebugableThreadFactory("events-scheduler", true));
     final Thread shutdownEvents = new Thread(new Runnable() {
       @Override
       public void run() { dispose(); }
     }, "shutdown-events");
     shutdownEvents.setUncaughtExceptionHandler(LoggingUncaughtExceptionHandler.SINGLETON);
     Runtime.getRuntime().addShutdownHook(shutdownEvents);
+  }
+
+  private static ThreadPoolExecutor newFixThreadPool(int nThreads, ThreadFactory threadFactory) {
+    return new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
+                                  new LinkedBlockingQueue<Runnable>(nThreads * 2), threadFactory);
   }
 
   private Events() {}
@@ -43,9 +50,7 @@ public final class Events {
     }
   }
 
-  /**
-   * @see java.util.concurrent.ExecutorService#execute(Runnable)
-   */
+  /** @see java.util.concurrent.ExecutorService#execute(Runnable) */
   public static void enqueue(final Runnable task) {
     EXECUTOR.execute(task);
   }
