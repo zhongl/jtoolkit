@@ -26,11 +26,6 @@ public final class Events {
     Runtime.getRuntime().addShutdownHook(shutdownEvents);
   }
 
-  private static ThreadPoolExecutor newFixThreadPool(int nThreads, ThreadFactory threadFactory) {
-    return new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
-                                  new LinkedBlockingQueue<Runnable>(nThreads * 2), threadFactory);
-  }
-
   private Events() {}
 
   public static void dispose() {
@@ -59,12 +54,8 @@ public final class Events {
     return scheduleAtFixedRate(event(command), period, period, unit);
   }
 
-  /**
-   * @see java.util.concurrent.ScheduledExecutorService#scheduleAtFixedRate(Runnable, long, long,
-   *      java.util.concurrent.TimeUnit)
-   */
-  public static ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
-                                                       TimeUnit unit) {
+  /** @see java.util.concurrent.ScheduledExecutorService#scheduleAtFixedRate(Runnable, long, long, TimeUnit) */
+  public static ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
     return SCHEDULER.scheduleAtFixedRate(command, initialDelay, period, unit);
   }
 
@@ -76,6 +67,11 @@ public final class Events {
         EXECUTOR.execute(command);
       }
     };
+  }
+
+  private static ThreadPoolExecutor newFixThreadPool(int nThreads, ThreadFactory threadFactory) {
+    return new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
+                                  new LinkedBlockingQueue<Runnable>(nThreads * 2), threadFactory);
   }
 
   private final static ExecutorService EXECUTOR;
