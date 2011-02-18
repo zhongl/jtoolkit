@@ -1,6 +1,6 @@
 package com.github.zhongl.jtoolkit;
 
-import static java.util.concurrent.Executors.newScheduledThreadPool;
+import static java.util.concurrent.Executors.*;
 
 import java.util.concurrent.*;
 
@@ -25,8 +25,6 @@ public final class Events {
     shutdownEvents.setUncaughtExceptionHandler(LoggingUncaughtExceptionHandler.SINGLETON);
     Runtime.getRuntime().addShutdownHook(shutdownEvents);
   }
-
-  private Events() {}
 
   public static void dispose() {
     try {
@@ -55,7 +53,8 @@ public final class Events {
   }
 
   /** @see java.util.concurrent.ScheduledExecutorService#scheduleAtFixedRate(Runnable, long, long, TimeUnit) */
-  public static ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period, TimeUnit unit) {
+  public static ScheduledFuture<?> scheduleAtFixedRate(Runnable command, long initialDelay, long period,
+                                                       TimeUnit unit) {
     return SCHEDULER.scheduleAtFixedRate(command, initialDelay, period, unit);
   }
 
@@ -71,7 +70,8 @@ public final class Events {
 
   private static ThreadPoolExecutor newFixThreadPool(int nThreads, ThreadFactory threadFactory) {
     return new ThreadPoolExecutor(nThreads, nThreads, 0L, TimeUnit.MILLISECONDS,
-                                  new LinkedBlockingQueue<Runnable>(nThreads * 2), threadFactory);
+                                  new LinkedBlockingQueue<Runnable>(nThreads * 2), threadFactory,
+                                  new ThreadPoolExecutor.CallerRunsPolicy());
   }
 
   private final static ExecutorService EXECUTOR;
