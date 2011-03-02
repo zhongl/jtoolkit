@@ -13,6 +13,12 @@ import static java.lang.Thread.sleep;
 import static org.hamcrest.Matchers.is;
 import static org.junit.Assert.assertThat;
 
+/**
+ * {@link CentralExecutorTest }...
+ *
+ * @author  <a href="mailto:zhong.lunfu@gmail.com">zhongl</a>
+ * @created 11-3-2
+ */
 public class CentralExecutorTest {
   private CentralExecutor executor;
 
@@ -35,10 +41,10 @@ public class CentralExecutorTest {
 
     sleep(100L);
     assertThat(ph1.running, is(true));
+    assertThat(ph2.running, is(false));
 
     ph1.running = false;
     sleep(100L);
-    assertThat(ph1.interrupted, is(false));
     assertThat(ph2.running, is(true));
 
     ph2.running = false;
@@ -60,8 +66,8 @@ public class CentralExecutorTest {
     sleep(100L);
 
     assertThat(ph1.running,is(true));
-    assertThat(ph2.running,is(true));
-    assertThat(ph3.running,is(false));
+    assertThat(ph2.running, is(true));
+    assertThat(ph3.running, is(false));
 
     ph1.running = false;
     sleep(100L);

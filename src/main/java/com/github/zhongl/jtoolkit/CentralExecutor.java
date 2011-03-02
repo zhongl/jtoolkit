@@ -76,6 +76,7 @@ public class CentralExecutor implements Executor {
    * @param taskClass
    * @param reserve
    * @param elastic
+   *
    * @throws IllegalArgumentException
    */
   public void quota(Class<? extends Runnable> taskClass, Quota reserve, Quota elastic) {
@@ -133,9 +134,10 @@ public class CentralExecutor implements Executor {
   /** {@link Policy} */
   public static enum Policy {
 
-    /** 乐观策略, 一旦出现闲置线程, 允许任务抢占, 抢占的优先级由Elastic来决定. */
+    /** 乐观策略, 在存在为分配的配额情况下, 一旦出现闲置线程, 允许任务抢占, 抢占的优先级由提交的先后顺序决定. */
     OPTIMISM {
 
+      /** 未定义配额的任务将直接进入等待队列, 但优先级等于所有定义了配额的任务. */
       private final Submitter defaultSubmitter = new Submitter() {
         @Override
         public void submit(Runnable task, CentralExecutor executor) { enqueue(new ComparableTask(task, -1)); }
@@ -150,8 +152,10 @@ public class CentralExecutor implements Executor {
           @Override
           public void submit(final Runnable task, CentralExecutor executor) {
             if (reserve.acquire()) doSubmit(task, executor, reserve);
-            else if (elastic.acquire() && executor.hasUnreserved()) doSubmit(task, executor, elastic);
-            else enqueue(new ComparableTask(task, 0));
+              // 若存在为分配的预留配额, 则弹性配额进行争抢
+            else if (executor.hasUnreserved() && elastic.acquire()) doSubmit(task, executor, elastic);
+              // 同悲观策略进入等待队列
+            else enqueue(new ComparableTask(task, reserve.value));
           }
         };
       }
@@ -174,11 +178,12 @@ public class CentralExecutor implements Executor {
       Submitter submitter(final Quota reserve, final Quota elastic) {
         if (reserve.value == 0)
           throw new IllegalArgumentException("None-reserve task will never be executed in pessimism.");
-        
+
         return new Submitter() {
           @Override
           public void submit(final Runnable task, CentralExecutor executor) {
             if (reserve.acquire()) doSubmit(task, executor, reserve);
+              // 耗尽预留配额后, 进入等待队列, 按预留额度大小排优先级, 大者优先.
             else enqueue(new ComparableTask(task, reserve.value));
           }
         };
@@ -186,17 +191,20 @@ public class CentralExecutor implements Executor {
     };
 
 
+    /** 优先级等待队列. */
     private final PriorityBlockingQueue<ComparableTask> queue = new PriorityBlockingQueue<ComparableTask>();
 
     abstract Submitter submitter(Quota reserve, Quota elastic);
 
     abstract Submitter defaultSubmitter();
 
+    /** 将任务入等待队列. */
     void enqueue(ComparableTask task) {
       queue.put(task);
       LOGGER.debug("Enqueue {}", task.original);
     }
 
+    /** 将任务出列重新提交给执行器. */
     void dequeueTo(CentralExecutor executor) {
       try {
         final Runnable task = queue.take().original;
