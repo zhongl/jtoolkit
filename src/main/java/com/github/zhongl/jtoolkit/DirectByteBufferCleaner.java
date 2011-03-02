@@ -1,6 +1,5 @@
 package com.github.zhongl.jtoolkit;
 
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 import java.security.AccessController;
@@ -9,7 +8,7 @@ import java.security.PrivilegedAction;
 /**
  * {@link DirectByteBufferCleaner}
  *
- * @author <a href=mailto:jushi@taobao.com>jushi</a>
+ * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2011-1-14
  */
 public final class DirectByteBufferCleaner {
@@ -23,7 +22,7 @@ public final class DirectByteBufferCleaner {
     } catch (Exception e) { /* ignore */ }
   }
 
-  private static Object invoke(final Object target, String methodName) throws NoSuchMethodException, IllegalAccessException, InvocationTargetException {
+  private static Object invoke(final Object target, String methodName) throws Exception {
     final Method method = target.getClass().getMethod(methodName);
     return AccessController.doPrivileged(new PrivilegedAction<Object>() {
       @Override
