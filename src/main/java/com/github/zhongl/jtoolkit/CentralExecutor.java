@@ -1,14 +1,15 @@
 package com.github.zhongl.jtoolkit;
 
-import static com.github.zhongl.jtoolkit.CentralExecutor.Policy.*;
-import static java.util.concurrent.Executors.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.github.zhongl.jtoolkit.CentralExecutor.Policy.PESSIMISM;
+import static java.util.concurrent.Executors.newFixedThreadPool;
 
 /**
  * {@link CentralExecutor} 支持对各种 {@link Runnable} 任务进行线程资源的配额设定, 实现线程池统一规划管理.
@@ -36,14 +37,19 @@ public class CentralExecutor implements Executor {
 
   public CentralExecutor(int threadSize) { this(threadSize, PESSIMISM); }
 
-  public void shutdown() { service.shutdown(); }
-
+  /** @see ExecutorService#shutdownNow() */
   public List<Runnable> shutdownNow() { return service.shutdownNow(); }
 
+  /** @see ExecutorService#shutdown() */
+  public void shutdown() { service.shutdown(); }
+
+  /** @see ExecutorService#isShutdown() */
   public boolean isShutdown() { return service.isShutdown(); }
 
+  /** @see ExecutorService#isTerminated() */
   public boolean isTerminated() { return service.isTerminated(); }
 
+  /** @see ExecutorService#awaitTermination(long, java.util.concurrent.TimeUnit) */
   public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
     return service.awaitTermination(timeout, unit);
   }
@@ -55,32 +61,34 @@ public class CentralExecutor implements Executor {
     else policy.defaultSubmitter().submit(task, this);
   }
 
+  /** @return 预留配额. */
   public static Quota reserve(int value) { return new Quota(value); }
 
-  public static Quota limit(int value) { return new Quota(value); }
+  /** @return 弹性配额. */
+  public static Quota elastic(int value) { return new Quota(value); }
 
-  public static Quota unlimited() { return new Quota(Integer.MAX_VALUE); }
+  /** @return 零配额. */
+  public static Quota nil() { return new Quota(0); }
 
   /**
    * 设定taskClass的保留和限制配额.
    *
    * @param taskClass
    * @param reserve
-   * @param limit
-   *
+   * @param elastic
    * @throws IllegalArgumentException
    */
-  public void quota(Class<? extends Runnable> taskClass, Quota reserve, Quota limit) {
-    if (limit.value == 0) throw new IllegalArgumentException("Limit should not be 0.");
-    if (reserve.value > limit.value) throw new IllegalArgumentException("Reserve should not greater than limit.");
+  public void quota(Class<? extends Runnable> taskClass, Quota reserve, Quota elastic) {
 
     synchronized (this) {
       if (reserve.value > threadSize - reserved) throw new IllegalArgumentException("No resource for reserve");
       reserved += reserve.value;
     }
 
-    quotas.put(taskClass, policy.submitter(reserve, limit));
+    quotas.put(taskClass, policy.submitter(reserve, elastic));
   }
+
+  private synchronized boolean hasUnreserved() { return threadSize > reserved; }
 
   /** {@link Quota} */
   private final static class Quota {
@@ -125,112 +133,83 @@ public class CentralExecutor implements Executor {
   /** {@link Policy} */
   public static enum Policy {
 
-    /** 乐观策略, 当预留配额出现闲置, 允许被其它任务抢占, 但此任务支持被中断(Interrupted), 以让出执行线程. */
+    /** 乐观策略, 一旦出现闲置线程, 允许任务抢占, 抢占的优先级由Elastic来决定. */
     OPTIMISM {
-      private Collection<Future<?>> shoots;
+
+      private final Submitter defaultSubmitter = new Submitter() {
+        @Override
+        public void submit(Runnable task, CentralExecutor executor) { enqueue(new ComparableTask(task, -1)); }
+      };
 
       @Override
-      Submitter defaultSubmitter() {
-        // TODO
-        throw new UnsupportedOperationException();
-      }
+      Submitter defaultSubmitter() { return defaultSubmitter; }
 
       @Override
-      Submitter submitter(final Quota reserve, final Quota limit) {
+      Submitter submitter(final Quota reserve, final Quota elastic) {
         return new Submitter() {
           @Override
           public void submit(final Runnable task, CentralExecutor executor) {
-            if (!limit.acquire()) enqueue(new ComparableTask(task, reserve.value));
-            if (!reserve.acquire() && limit.acquire()) shoot(task, executor, limit);
-            if (reserve.acquire() && limit.acquire()) submit(task, executor, limit, reserve);
+            if (reserve.acquire()) doSubmit(task, executor, reserve);
+            else if (elastic.acquire() && executor.hasUnreserved()) doSubmit(task, executor, elastic);
+            else enqueue(new ComparableTask(task, 0));
           }
-
-          private void shoot(final Runnable task, CentralExecutor executor, final Quota limit) {
-            Future<?> future = executor.service.submit(new Runnable() {
-              @Override
-              public void run() {
-                try {
-                  task.run();
-                } catch (Throwable t) {
-                  LOGGER.error("Unexpected Interruption cause by", t);
-                } finally {
-                  limit.release();
-                  // TODO fetch task
-                }
-              }
-            });
-            shoots.add(future);
-          }
-
-          private void submit(final Runnable task, CentralExecutor executor, final Quota limit,
-                              final Quota reserve) {
-            executor.service.execute(new Runnable() {
-              @Override
-              public void run() {
-                try {
-                  task.run();
-                } catch (Throwable t) {
-                  LOGGER.error("Unexpected Interruption cause by", t);
-                } finally {
-                  limit.release(); // TODO 一致性的隐患
-                  reserve.release();
-                  // TODO fetch task
-                }
-              }
-            });
-          }
-
         };
       }
     },
 
-    /** 悲观策略, 在所有线程都被预留的情况下, 即使当前预留之外的线程是空闲, 也不会被抢占, 即Limit的设定是被忽略. */
+    /** 悲观策略, 在所有线程都被预留的情况下, 即使当前预留之外的线程是空闲, 也不会被抢占, 即Elastic的设定将被忽略. */
     PESSIMISM {
-      @Override
-      Submitter defaultSubmitter() {
-        return new Submitter() {
-          @Override
-          public void submit(Runnable task, CentralExecutor executor) {
-            throw new RejectedExecutionException("Unquotaed task can not be executed in pessimism.");
-          }
-        };
-      }
+
+      private final Submitter defaultSubmitter = new Submitter() {
+        @Override
+        public void submit(Runnable task, CentralExecutor executor) {
+          throw new RejectedExecutionException("Unquotaed task can not be executed in pessimism.");
+        }
+      };
 
       @Override
-      Submitter submitter(final Quota reserve, final Quota limit) {
+      Submitter defaultSubmitter() { return defaultSubmitter; }
+
+      @Override
+      Submitter submitter(final Quota reserve, final Quota elastic) {
         if (reserve.value == 0)
           throw new IllegalArgumentException("None-reserve task will never be executed in pessimism.");
-
+        
         return new Submitter() {
           @Override
           public void submit(final Runnable task, CentralExecutor executor) {
-            if (!reserve.acquire()) enqueue(new ComparableTask(task, reserve.value));
-            else executor.service.execute(new Decorator(task, reserve, executor));
+            if (reserve.acquire()) doSubmit(task, executor, reserve);
+            else enqueue(new ComparableTask(task, reserve.value));
           }
         };
       }
     };
 
-    final PriorityBlockingQueue<ComparableTask> queue = new PriorityBlockingQueue<ComparableTask>();
 
-    void enqueue(ComparableTask task) {
-      LOGGER.debug("Enqueue {}", task.original);
-      queue.put(task);
-    }
+    private final PriorityBlockingQueue<ComparableTask> queue = new PriorityBlockingQueue<ComparableTask>();
 
-    abstract Submitter submitter(Quota reserve, Quota limit);
+    abstract Submitter submitter(Quota reserve, Quota elastic);
 
     abstract Submitter defaultSubmitter();
+
+    void enqueue(ComparableTask task) {
+      queue.put(task);
+      LOGGER.debug("Enqueue {}", task.original);
+    }
 
     void dequeueTo(CentralExecutor executor) {
       try {
         final Runnable task = queue.take().original;
         LOGGER.debug("Dequeue {}", task);
-        executor.service.execute(task);
+        executor.execute(task);
       } catch (InterruptedException e) {
-        e.printStackTrace();
         Thread.currentThread().interrupt();
+        LOGGER.debug("Dequeue has been interrupted ", e);
       }
+    }
+
+    void doSubmit(Runnable task, CentralExecutor executor, Quota quota) {
+      executor.service.execute(new Decorator(task, quota, executor));
     }
 
     /** {@link ComparableTask} */
