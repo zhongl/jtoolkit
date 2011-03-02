@@ -93,8 +93,14 @@ public class CentralExecutor implements Executor {
       this.state = new AtomicInteger(value);
     }
 
+    /** @return 当前剩余配额. */
     public int state() { return state.get(); }
 
+    /**
+     * 占据一个配额.
+     *
+     * @return false 表示预留的配额以用完, 反之为true.
+     */
     public boolean acquire() {
       if (state() == 0) return false;
       if (state.decrementAndGet() >= 0) return true;
@@ -102,6 +108,11 @@ public class CentralExecutor implements Executor {
       return false;
     }
 
+    /**
+     * 释放一个配额.
+     *
+     * @return false 表示无效的释放, 正常情况下不应出现, 反之为true.
+     */
     public boolean release() {
       if (state() == value) return false;
       if (state.incrementAndGet() <= value) return true;
@@ -129,7 +140,7 @@ public class CentralExecutor implements Executor {
         return new Submitter() {
           @Override
           public void submit(final Runnable task, CentralExecutor executor) {
-            if (!limit.acquire()) enquene(task);
+            if (!limit.acquire()) enqueue(new ComparableTask(task, reserve.value));
             if (!reserve.acquire() && limit.acquire()) shoot(task, executor, limit);
             if (reserve.acquire() && limit.acquire()) submit(task, executor, limit, reserve);
           }
@@ -149,10 +160,6 @@ public class CentralExecutor implements Executor {
               }
             });
             shoots.add(future);
-          }
-
-          private void enquene(Runnable task) {
-            //To change body of created methods use File | Settings | File Templates.
           }
 
           private void submit(final Runnable task, CentralExecutor executor, final Quota limit,
@@ -206,7 +213,10 @@ public class CentralExecutor implements Executor {
 
     final PriorityBlockingQueue<ComparableTask> queue = new PriorityBlockingQueue<ComparableTask>();
 
-    void enqueue(ComparableTask task) { System.out.println("enqueue " + task); queue.put(task); }
+    void enqueue(ComparableTask task) {
+      LOGGER.debug("Enqueue {}", task.original);
+      queue.put(task);
+    }
 
     abstract Submitter submitter(Quota reserve, Quota limit);
 
@@ -215,7 +225,7 @@ public class CentralExecutor implements Executor {
     void dequeueTo(CentralExecutor executor) {
       try {
         final Runnable task = queue.take().original;
-        System.out.println("dequeue " + task);
+        LOGGER.debug("Dequeue {}", task);
         executor.service.execute(task);
       } catch (InterruptedException e) {
         e.printStackTrace();
@@ -261,8 +271,6 @@ public class CentralExecutor implements Executor {
         }
       }
     }
-
-
   }
 
   /** {@link Submitter} */
