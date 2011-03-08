@@ -1,15 +1,15 @@
 package com.github.zhongl.jtoolkit;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.github.zhongl.jtoolkit.CentralExecutor.Policy.*;
+import static java.util.concurrent.Executors.*;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static com.github.zhongl.jtoolkit.CentralExecutor.Policy.PESSIMISM;
-import static java.util.concurrent.Executors.newFixedThreadPool;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link CentralExecutor} 支持对各种 {@link Runnable} 任务进行线程资源的配额设定, 实现线程池统一规划管理.
@@ -137,10 +137,10 @@ public class CentralExecutor implements Executor {
     /** 乐观策略, 在存在为分配的配额情况下, 一旦出现闲置线程, 允许任务抢占, 抢占的优先级由提交的先后顺序决定. */
     OPTIMISM {
 
-      /** 未定义配额的任务将直接进入等待队列, 但优先级等于所有定义了配额的任务. */
+      /** 未定义配额的任务将直接进入等待队列, 但优先级低于所有定义了配额的任务. */
       private final Submitter defaultSubmitter = new Submitter() {
         @Override
-        public void submit(Runnable task, CentralExecutor executor) { enqueue(new ComparableTask(task, -1)); }
+        public void submit(Runnable task, CentralExecutor executor) { enqueue(new ComparableTask(task, Integer.MAX_VALUE)); }
       };
 
       @Override
@@ -231,7 +231,7 @@ public class CentralExecutor implements Executor {
       }
 
       @Override
-      public int compareTo(ComparableTask o) { return quota - o.quota; }
+      public int compareTo(ComparableTask o) { return -(quota - o.quota); }
     }
 
     /** {@link Decorator} */
