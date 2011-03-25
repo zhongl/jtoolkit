@@ -16,7 +16,7 @@ public class IDPoolBaseOnFile {
 
   private int inUsed = 0;
 
-  public IDPoolBaseOnFile( int capacity,  String file) throws IOException {
+  public IDPoolBaseOnFile(int capacity, String file) throws IOException {
     this.capacity = capacity;
     raf = new RandomAccessFile(file, "rwd");
     try {
@@ -96,7 +96,7 @@ public class IDPoolBaseOnFile {
     for (int i = 0; i < capacity; i++) release(i);
   }
 
-  private static int alignAt8( int num) {return num / 8 + (num % 8 == 0 ? 0 : 1);}
+  private static int alignAt8(int num) {return num / 8 + (num % 8 == 0 ? 0 : 1);}
 
   private static int bit(long id) { return (1 << id % 8); }
 
