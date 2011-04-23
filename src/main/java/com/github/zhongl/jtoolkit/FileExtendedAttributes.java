@@ -1,34 +1,31 @@
 package com.github.zhongl.jtoolkit;
 
 import com.sun.jna.Library;
-import com.sun.jna.Native;
 
 import java.io.File;
 import java.io.IOException;
-import java.nio.Buffer;
-import java.nio.IntBuffer;
-import java.nio.LongBuffer;
-import java.nio.ShortBuffer;
+import java.nio.*;
 
 import static com.github.zhongl.jtoolkit.FileExtendedAttributes.NativeLib.LIB;
+import static com.sun.jna.Native.loadLibrary;
+import static com.sun.jna.Native.synchronizedLibrary;
 
 /**
  * {@link FileExtendedAttributes} only support linux OS.
  *
- * @author <a href="mailto:zhongl@gmail.com">zhongl</a>
+ * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a>
  */
 public final class FileExtendedAttributes {
-  public static final String ID = "user.Id";
-  public static final String REPLICATION = "user.repl";
-  public static final String BLOCK_SIZE = "user.blks";
 
-  public static final int ERROR = -1;
-  public static final String LENGTH = "user.length";
+  public static final String USER_PREFIX = "user.";
+  public static final int ETOOSMALL = -525;
+  public static final int ENOTSUPP = -524;
+  public static final int FLAGS = 0;
 
-  private final String path;
+  private final String pathname;
 
   interface NativeLib extends Library {
-    NativeLib LIB = (NativeLib) Native.loadLibrary("libc.so.6", NativeLib.class);
+    NativeLib LIB = (NativeLib) synchronizedLibrary((NativeLib) loadLibrary("libc.so.6", NativeLib.class));
 
     int setxattr(String pathname, String name, Buffer value, int size, int flags);
 
@@ -43,59 +40,65 @@ public final class FileExtendedAttributes {
     return new FileExtendedAttributes(path);
   }
 
-  private FileExtendedAttributes(String path) {this.path = path;}
-
-  public void setId(int id) throws IOException {
-    final Buffer buffer = IntBuffer.allocate(1).put(id).flip();
-    final int returnCode = LIB.setxattr(path, ID, buffer, 4, 0);
-    if (returnCode == ERROR) throw new IOException("Operation not supported");
-
+  public void set(String name, Buffer buffer, int size) throws IOException {
+    throwIoExceptionIfFailed(LIB.setxattr(pathname, USER_PREFIX + name, buffer, size, FLAGS));
   }
 
-  public int getId() throws IOException {
-    final IntBuffer buffer = IntBuffer.allocate(1);
-    final int returnCode = LIB.getxattr(path, ID, buffer, 4);
-    if (returnCode == ERROR) throw new IOException("Operation not supported");
-    return buffer.get(0);
+  public void set(String name, short value) throws IOException { set(name, buffer(value), 2); }
+
+  public void set(String name, int value) throws IOException { set(name, buffer(value), 4); }
+
+  public void set(String name, long value) throws IOException { set(name, buffer(value), 8); }
+
+  public void set(String name, String value) throws IOException { set(name, buffer(value), value.getBytes().length); }
+
+  public void get(String name, Buffer buffer, int size) throws IOException {
+    throwIoExceptionIfFailed(LIB.getxattr(pathname, name, buffer, size));
   }
 
-  public void setBlockSize(long blockSize) throws IOException {
-    final Buffer buffer = LongBuffer.allocate(1).put(blockSize).flip();
-    final int returnCode = LIB.setxattr(path, BLOCK_SIZE, buffer, 8, 0);
-    if (returnCode == ERROR) throw new IOException("Operation not supported");
-  }
-
-  public long getBlockSize() throws IOException {
-    final LongBuffer buffer = LongBuffer.allocate(1);
-    final int returnCode = LIB.getxattr(path, BLOCK_SIZE, buffer, 8);
-    if (returnCode == ERROR) throw new IOException("Operation not supported");
-    return buffer.get(0);
-  }
-
-  public void setLength(long length) throws IOException {
-    final Buffer buffer = LongBuffer.allocate(1).put(length).flip();
-    final int returnCode = LIB.setxattr(path, LENGTH, buffer, 8, 0);
-    if (returnCode == ERROR) throw new IOException("Operation not supported");
-  }
-
-  public long getLength() throws IOException {
-    final LongBuffer buffer = LongBuffer.allocate(1);
-    final int returnCode = LIB.getxattr(path, LENGTH, buffer, 8);
-    if (returnCode == ERROR) throw new IOException("Operation not supported");
-    return buffer.get(0);
-  }
-
-  public void setReplication(short replication) throws IOException {
-    final Buffer buffer = ShortBuffer.allocate(1).put(replication).flip();
-    final int returnCode = LIB.setxattr(path, REPLICATION, buffer, 2, 0);
-    if (returnCode == ERROR) throw new IOException("Operation not supported");
-  }
-
-  public short getReplication() throws IOException {
+  public short getShort(String name) throws IOException {
     final ShortBuffer buffer = ShortBuffer.allocate(1);
-    final int returnCode = LIB.getxattr(path, REPLICATION, buffer, 2);
-    if (returnCode == ERROR) throw new IOException("Operation not supported");
-    return buffer.get(0);
+    get(name, buffer, 2);
+    return buffer.get(FLAGS);
   }
 
+  public int getInt(String name) throws IOException {
+    final IntBuffer buffer = IntBuffer.allocate(1);
+    get(name, buffer, 4);
+    return buffer.get(FLAGS);
+  }
+
+  public long getLong(String name) throws IOException {
+    final LongBuffer buffer = LongBuffer.allocate(1);
+    get(name, buffer, 8);
+    return buffer.get(FLAGS);
+  }
+
+  public String getString(String name, int size) throws IOException {
+    final ByteBuffer buffer = ByteBuffer.allocate(size);
+    get(name, buffer, size);
+    return new String(buffer.array());
+  }
+
+  private FileExtendedAttributes(String pathname) {this.pathname = pathname;}
+
+  private static Buffer buffer(short value) {return ShortBuffer.wrap(new short[]{value});}
+
+  private static Buffer buffer(int value) {return IntBuffer.wrap(new int[]{value});}
+
+  private static Buffer buffer(long value) {return LongBuffer.wrap(new long[]{value});}
+
+  private static Buffer buffer(String value) {return ByteBuffer.wrap(value.getBytes());}
+
+  private static void throwIoExceptionIfFailed(int returnCode) throws IOException {
+    if (returnCode >= FLAGS) return;
+    switch (returnCode) {
+      case ENOTSUPP:
+        throw new IOException("Operation is not supported");
+      case ETOOSMALL:
+        throw new IOException("Buffer or request is too small");
+      default:
+        throw new IOException("Operation failed, and error no is " + returnCode);
+    }
+  }
 }
