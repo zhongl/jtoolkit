@@ -15,14 +15,14 @@ import static com.sun.jna.Native.synchronizedLibrary;
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</a>
  */
-public final class FileExtendedAttributes {
+public class FileExtendedAttributes {
 
   public static final String USER_PREFIX = "user.";
   public static final int ETOOSMALL = -525;
   public static final int ENOTSUPP = -524;
   public static final int FLAGS = 0;
 
-  private final String pathname;
+  private final String path;
 
   interface NativeLib extends Library {
     NativeLib LIB = (NativeLib) synchronizedLibrary((NativeLib) loadLibrary("libc.so.6", NativeLib.class));
@@ -41,7 +41,7 @@ public final class FileExtendedAttributes {
   }
 
   public void set(String name, Buffer buffer, int size) throws IOException {
-    throwIoExceptionIfFailed(LIB.setxattr(pathname, USER_PREFIX + name, buffer, size, FLAGS));
+    throwIoExceptionIfFailed(LIB.setxattr(path, USER_PREFIX + name, buffer, size, FLAGS));
   }
 
   public void set(String name, short value) throws IOException { set(name, buffer(value), 2); }
@@ -53,25 +53,25 @@ public final class FileExtendedAttributes {
   public void set(String name, String value) throws IOException { set(name, buffer(value), value.getBytes().length); }
 
   public void get(String name, Buffer buffer, int size) throws IOException {
-    throwIoExceptionIfFailed(LIB.getxattr(pathname, name, buffer, size));
+    throwIoExceptionIfFailed(LIB.getxattr(path, name, buffer, size));
   }
 
   public short getShort(String name) throws IOException {
     final ShortBuffer buffer = ShortBuffer.allocate(1);
     get(name, buffer, 2);
-    return buffer.get(FLAGS);
+    return buffer.get(0);
   }
 
   public int getInt(String name) throws IOException {
     final IntBuffer buffer = IntBuffer.allocate(1);
     get(name, buffer, 4);
-    return buffer.get(FLAGS);
+    return buffer.get(0);
   }
 
   public long getLong(String name) throws IOException {
     final LongBuffer buffer = LongBuffer.allocate(1);
     get(name, buffer, 8);
-    return buffer.get(FLAGS);
+    return buffer.get(0);
   }
 
   public String getString(String name, int size) throws IOException {
@@ -80,7 +80,7 @@ public final class FileExtendedAttributes {
     return new String(buffer.array());
   }
 
-  private FileExtendedAttributes(String pathname) {this.pathname = pathname;}
+  private FileExtendedAttributes(String path) {this.path = path;}
 
   private static Buffer buffer(short value) {return ShortBuffer.wrap(new short[]{value});}
 
