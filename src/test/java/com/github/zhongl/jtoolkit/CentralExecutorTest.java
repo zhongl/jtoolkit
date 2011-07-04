@@ -102,7 +102,6 @@ public class CentralExecutorTest {
   private class Placeholder implements Runnable {
 
     public volatile boolean running = false;
-    public volatile boolean interrupted = false;
 
     @Override
     public void run() {
@@ -111,7 +110,6 @@ public class CentralExecutorTest {
         while (running) sleep(50L);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        interrupted = true;
       }
     }
   }
