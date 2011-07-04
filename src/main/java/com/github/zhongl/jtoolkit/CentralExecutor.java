@@ -12,7 +12,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * {@link CentralExecutor} æ”¯æŒå¯¹å„ç§ {@link Runnable} ä»»åŠ¡è¿›è¡Œçº¿ç¨‹èµ„æºçš„é…é¢è®¾å®š, å®ç°çº¿ç¨‹æ± ç»Ÿä¸€è§„åˆ’ç®¡ç†.
+ * {@link CentralExecutor} Ö§³Ö¶Ô¸÷ÖÖ {@link Runnable} ÈÎÎñ½øĞĞÏß³Ì×ÊÔ´µÄÅä¶îÉè¶¨, ÊµÏÖÏß³Ì³ØÍ³Ò»¹æ»®¹ÜÀí.
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</>
  * @created 11-3-2
@@ -61,17 +61,17 @@ public class CentralExecutor implements Executor {
     else policy.defaultSubmitter().submit(task, this);
   }
 
-  /** @return é¢„ç•™é…é¢. */
+  /** @return Ô¤ÁôÅä¶î. */
   public static Quota reserve(int value) { return new Quota(value); }
 
-  /** @return å¼¹æ€§é…é¢. */
+  /** @return µ¯ĞÔÅä¶î. */
   public static Quota elastic(int value) { return new Quota(value); }
 
-  /** @return é›¶é…é¢. */
+  /** @return ÁãÅä¶î. */
   public static Quota nil() { return new Quota(0); }
 
   /**
-   * è®¾å®štaskClassçš„ä¿ç•™å’Œé™åˆ¶é…é¢.
+   * Éè¶¨taskClassµÄ±£ÁôºÍÏŞÖÆÅä¶î.
    *
    * @param taskClass
    * @param reserve
@@ -102,13 +102,13 @@ public class CentralExecutor implements Executor {
       this.state = new AtomicInteger(value);
     }
 
-    /** @return å½“å‰å‰©ä½™é…é¢. */
+    /** @return µ±Ç°Ê£ÓàÅä¶î. */
     public int state() { return state.get(); }
 
     /**
-     * å æ®ä¸€ä¸ªé…é¢.
+     * Õ¼¾İÒ»¸öÅä¶î.
      *
-     * @return false è¡¨ç¤ºé¢„ç•™çš„é…é¢ä»¥ç”¨å®Œ, åä¹‹ä¸ºtrue.
+     * @return false ±íÊ¾Ô¤ÁôµÄÅä¶îÒÔÓÃÍê, ·´Ö®Îªtrue.
      */
     public boolean acquire() {
       if (state() == 0) return false;
@@ -118,9 +118,9 @@ public class CentralExecutor implements Executor {
     }
 
     /**
-     * é‡Šæ”¾ä¸€ä¸ªé…é¢.
+     * ÊÍ·ÅÒ»¸öÅä¶î.
      *
-     * @return false è¡¨ç¤ºæ— æ•ˆçš„é‡Šæ”¾, æ­£å¸¸æƒ…å†µä¸‹ä¸åº”å‡ºç°, åä¹‹ä¸ºtrue.
+     * @return false ±íÊ¾ÎŞĞ§µÄÊÍ·Å, Õı³£Çé¿öÏÂ²»Ó¦³öÏÖ, ·´Ö®Îªtrue.
      */
     public boolean release() {
       if (state() == value) return false;
@@ -134,10 +134,10 @@ public class CentralExecutor implements Executor {
   /** {@link Policy} */
   public static enum Policy {
 
-    /** ä¹è§‚ç­–ç•¥, åœ¨å­˜åœ¨ä¸ºåˆ†é…çš„é…é¢æƒ…å†µä¸‹, ä¸€æ—¦å‡ºç°é—²ç½®çº¿ç¨‹, å…è®¸ä»»åŠ¡æŠ¢å , æŠ¢å çš„ä¼˜å…ˆçº§ç”±æäº¤çš„å…ˆåé¡ºåºå†³å®š. */
+    /** ÀÖ¹Û²ßÂÔ, ÔÚ´æÔÚÎª·ÖÅäµÄÅä¶îÇé¿öÏÂ, Ò»µ©³öÏÖÏĞÖÃÏß³Ì, ÔÊĞíÈÎÎñÇÀÕ¼, ÇÀÕ¼µÄÓÅÏÈ¼¶ÓÉÌá½»µÄÏÈºóË³Ğò¾ö¶¨. */
     OPTIMISM {
 
-      /** æœªå®šä¹‰é…é¢çš„ä»»åŠ¡å°†ç›´æ¥è¿›å…¥ç­‰å¾…é˜Ÿåˆ—, ä½†ä¼˜å…ˆçº§ä½äºæ‰€æœ‰å®šä¹‰äº†é…é¢çš„ä»»åŠ¡. */
+      /** Î´¶¨ÒåÅä¶îµÄÈÎÎñ½«Ö±½Ó½øÈëµÈ´ı¶ÓÁĞ, µ«ÓÅÏÈ¼¶µÍÓÚËùÓĞ¶¨ÒåÁËÅä¶îµÄÈÎÎñ. */
       private final Submitter defaultSubmitter = new Submitter() {
         @Override
         public void submit(Runnable task, CentralExecutor executor) { enqueue(new ComparableTask(task, Integer.MAX_VALUE)); }
@@ -152,16 +152,16 @@ public class CentralExecutor implements Executor {
           @Override
           public void submit(final Runnable task, CentralExecutor executor) {
             if (reserve.acquire()) doSubmit(task, executor, reserve);
-              // è‹¥å­˜åœ¨ä¸ºåˆ†é…çš„é¢„ç•™é…é¢, åˆ™å¼¹æ€§é…é¢è¿›è¡Œäº‰æŠ¢
+              // Èô´æÔÚÎª·ÖÅäµÄÔ¤ÁôÅä¶î, Ôòµ¯ĞÔÅä¶î½øĞĞÕùÇÀ
             else if (executor.hasUnreserved() && elastic.acquire()) doSubmit(task, executor, elastic);
-              // åŒæ‚²è§‚ç­–ç•¥è¿›å…¥ç­‰å¾…é˜Ÿåˆ—
+              // Í¬±¯¹Û²ßÂÔ½øÈëµÈ´ı¶ÓÁĞ
             else enqueue(new ComparableTask(task, reserve.value));
           }
         };
       }
     },
 
-    /** æ‚²è§‚ç­–ç•¥, åœ¨æ‰€æœ‰çº¿ç¨‹éƒ½è¢«é¢„ç•™çš„æƒ…å†µä¸‹, å³ä½¿å½“å‰é¢„ç•™ä¹‹å¤–çš„çº¿ç¨‹æ˜¯ç©ºé—², ä¹Ÿä¸ä¼šè¢«æŠ¢å , å³Elasticçš„è®¾å®šå°†è¢«å¿½ç•¥. */
+    /** ±¯¹Û²ßÂÔ, ÔÚËùÓĞÏß³Ì¶¼±»Ô¤ÁôµÄÇé¿öÏÂ, ¼´Ê¹µ±Ç°Ô¤ÁôÖ®ÍâµÄÏß³ÌÊÇ¿ÕÏĞ, Ò²²»»á±»ÇÀÕ¼, ¼´ElasticµÄÉè¶¨½«±»ºöÂÔ. */
     PESSIMISM {
 
       private final Submitter defaultSubmitter = new Submitter() {
@@ -183,7 +183,7 @@ public class CentralExecutor implements Executor {
           @Override
           public void submit(final Runnable task, CentralExecutor executor) {
             if (reserve.acquire()) doSubmit(task, executor, reserve);
-              // è€—å°½é¢„ç•™é…é¢å, è¿›å…¥ç­‰å¾…é˜Ÿåˆ—, æŒ‰é¢„ç•™é¢åº¦å¤§å°æ’ä¼˜å…ˆçº§, å¤§è€…ä¼˜å…ˆ.
+              // ºÄ¾¡Ô¤ÁôÅä¶îºó, ½øÈëµÈ´ı¶ÓÁĞ, °´Ô¤Áô¶î¶È´óĞ¡ÅÅÓÅÏÈ¼¶, ´óÕßÓÅÏÈ.
             else enqueue(new ComparableTask(task, reserve.value));
           }
         };
@@ -191,20 +191,20 @@ public class CentralExecutor implements Executor {
     };
 
 
-    /** ä¼˜å…ˆçº§ç­‰å¾…é˜Ÿåˆ—. */
+    /** ÓÅÏÈ¼¶µÈ´ı¶ÓÁĞ. */
     private final PriorityBlockingQueue<ComparableTask> queue = new PriorityBlockingQueue<ComparableTask>();
 
     abstract Submitter submitter(Quota reserve, Quota elastic);
 
     abstract Submitter defaultSubmitter();
 
-    /** å°†ä»»åŠ¡å…¥ç­‰å¾…é˜Ÿåˆ—. */
+    /** ½«ÈÎÎñÈëµÈ´ı¶ÓÁĞ. */
     void enqueue(ComparableTask task) {
       queue.put(task);
       LOGGER.debug("Enqueue {}", task.original);
     }
 
-    /** å°†ä»»åŠ¡å‡ºåˆ—é‡æ–°æäº¤ç»™æ‰§è¡Œå™¨. */
+    /** ½«ÈÎÎñ³öÁĞÖØĞÂÌá½»¸øÖ´ĞĞÆ÷. */
     void dequeueTo(CentralExecutor executor) {
       try {
         final Runnable task = queue.take().original;
