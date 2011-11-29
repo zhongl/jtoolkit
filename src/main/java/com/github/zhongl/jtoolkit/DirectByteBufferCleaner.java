@@ -28,6 +28,7 @@ public final class DirectByteBufferCleaner {
       @Override
       public Object run() {
         try {
+          method.setAccessible(true);
           return method.invoke(target);
         } catch (Exception e) {
           throw new RuntimeException(e);
