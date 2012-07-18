@@ -5,7 +5,10 @@
   <groupId>com.github.zhongl</groupId>
   <artifactId>jtoolkit</artifactId>
   <version>1.0</version>
-  <packaging>jar</packaging>
+    <modules>
+        <module>guards</module>
+    </modules>
+    <packaging>pom</packaging>
 
   <name>jtoolkit</name>
   <url>https://github.com/zhongl/jtoolkit</url>
