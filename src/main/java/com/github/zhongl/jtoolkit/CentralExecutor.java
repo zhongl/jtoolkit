@@ -1,267 +1,267 @@
 package com.github.zhongl.jtoolkit;
 
-import static com.github.zhongl.jtoolkit.CentralExecutor.Policy.*;
-import static java.util.concurrent.Executors.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import static com.github.zhongl.jtoolkit.CentralExecutor.Policy.PESSIMISM;
+import static java.util.concurrent.Executors.newFixedThreadPool;
 
 /**
- * {@link CentralExecutor} Ö§³Ö¶Ô¸÷ÖÖ {@link Runnable} ÈÎÎñ½øĞĞÏß³Ì×ÊÔ´µÄÅä¶îÉè¶¨, ÊµÏÖÏß³Ì³ØÍ³Ò»¹æ»®¹ÜÀí.
+ * {@link CentralExecutor} æ”¯æŒå¯¹å„ç§ {@link Runnable} ä»»åŠ¡è¿›è¡Œçº¿ç¨‹èµ„æºçš„é…é¢è®¾å®š, å®ç°çº¿ç¨‹æ± ç»Ÿä¸€è§„åˆ’ç®¡ç†.
  *
  * @author <a href="mailto:zhong.lunfu@gmail.com">zhongl</>
  * @created 11-3-2
  */
 public class CentralExecutor implements Executor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(CentralExecutor.class);
-  private static final String CLASS_NAME = CentralExecutor.class.getSimpleName();
+    private static final Logger LOGGER = LoggerFactory.getLogger(CentralExecutor.class);
+    private static final String CLASS_NAME = CentralExecutor.class.getSimpleName();
 
-  private final ExecutorService service;
-  private final Policy policy;
-  private final Map<Class<? extends Runnable>, Submitter> quotas;
-  private final int threadSize;
+    private final ExecutorService service;
+    private final Policy policy;
+    private final Map<Class<? extends Runnable>, Submitter> quotas;
+    private final int threadSize;
 
-  private int reserved;
+    private int reserved;
 
-  public CentralExecutor(final int threadSize, Policy policy) {
-    this.threadSize = threadSize;
-    this.policy = policy;
-    this.service = newFixedThreadPool(threadSize, new DebugableThreadFactory(CLASS_NAME));
-    this.quotas = new ConcurrentHashMap<Class<? extends Runnable>, Submitter>();
-  }
-
-  public CentralExecutor(int threadSize) { this(threadSize, PESSIMISM); }
-
-  /** @see ExecutorService#shutdownNow() */
-  public List<Runnable> shutdownNow() { return service.shutdownNow(); }
-
-  /** @see ExecutorService#shutdown() */
-  public void shutdown() { service.shutdown(); }
-
-  /** @see ExecutorService#isShutdown() */
-  public boolean isShutdown() { return service.isShutdown(); }
-
-  /** @see ExecutorService#isTerminated() */
-  public boolean isTerminated() { return service.isTerminated(); }
-
-  /** @see ExecutorService#awaitTermination(long, java.util.concurrent.TimeUnit) */
-  public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
-    return service.awaitTermination(timeout, unit);
-  }
-
-  @Override
-  public void execute(Runnable task) {
-    final Submitter submitter = quotas.get(task.getClass());
-    if (submitter != null) submitter.submit(task, this);
-    else policy.defaultSubmitter().submit(task, this);
-  }
-
-  /** @return Ô¤ÁôÅä¶î. */
-  public static Quota reserve(int value) { return new Quota(value); }
-
-  /** @return µ¯ĞÔÅä¶î. */
-  public static Quota elastic(int value) { return new Quota(value); }
-
-  /** @return ÁãÅä¶î. */
-  public static Quota nil() { return new Quota(0); }
-
-  /**
-   * Éè¶¨taskClassµÄ±£ÁôºÍÏŞÖÆÅä¶î.
-   *
-   * @param taskClass
-   * @param reserve
-   * @param elastic
-   *
-   * @throws IllegalArgumentException
-   */
-  public void quota(Class<? extends Runnable> taskClass, Quota reserve, Quota elastic) {
-
-    synchronized (this) {
-      if (reserve.value > threadSize - reserved) throw new IllegalArgumentException("No resource for reserve");
-      reserved += reserve.value;
+    public CentralExecutor(final int threadSize, Policy policy) {
+        this.threadSize = threadSize;
+        this.policy = policy;
+        this.service = newFixedThreadPool(threadSize, new DebugableThreadFactory(CLASS_NAME));
+        this.quotas = new ConcurrentHashMap<Class<? extends Runnable>, Submitter>();
     }
 
-    quotas.put(taskClass, policy.submitter(reserve, elastic));
-  }
+    public CentralExecutor(int threadSize) { this(threadSize, PESSIMISM); }
 
-  private synchronized boolean hasUnreserved() { return threadSize > reserved; }
+    /** @see ExecutorService#shutdownNow() */
+    public List<Runnable> shutdownNow() { return service.shutdownNow(); }
 
-  /** {@link Quota} */
-  private final static class Quota {
-    private final AtomicInteger state;
-    private final int value;
+    /** @see ExecutorService#shutdown() */
+    public void shutdown() { service.shutdown(); }
 
-    private Quota(int value) {
-      if (value < 0) throw new IllegalArgumentException("Quota should not less than 0.");
-      this.value = value;
-      this.state = new AtomicInteger(value);
+    /** @see ExecutorService#isShutdown() */
+    public boolean isShutdown() { return service.isShutdown(); }
+
+    /** @see ExecutorService#isTerminated() */
+    public boolean isTerminated() { return service.isTerminated(); }
+
+    /** @see ExecutorService#awaitTermination(long, java.util.concurrent.TimeUnit) */
+    public boolean awaitTermination(long timeout, TimeUnit unit) throws InterruptedException {
+        return service.awaitTermination(timeout, unit);
     }
 
-    /** @return µ±Ç°Ê£ÓàÅä¶î. */
-    public int state() { return state.get(); }
+    @Override
+    public void execute(Runnable task) {
+        final Submitter submitter = quotas.get(task.getClass());
+        if (submitter != null) submitter.submit(task, this);
+        else policy.defaultSubmitter().submit(task, this);
+    }
+
+    /** @return é¢„ç•™é…é¢. */
+    public static Quota reserve(int value) { return new Quota(value); }
+
+    /** @return å¼¹æ€§é…é¢. */
+    public static Quota elastic(int value) { return new Quota(value); }
+
+    /** @return é›¶é…é¢. */
+    public static Quota nil() { return new Quota(0); }
 
     /**
-     * Õ¼¾İÒ»¸öÅä¶î.
+     * è®¾å®štaskClassçš„ä¿ç•™å’Œé™åˆ¶é…é¢.
      *
-     * @return false ±íÊ¾Ô¤ÁôµÄÅä¶îÒÔÓÃÍê, ·´Ö®Îªtrue.
-     */
-    public boolean acquire() {
-      if (state() == 0) return false;
-      if (state.decrementAndGet() >= 0) return true;
-      state.incrementAndGet();
-      return false;
-    }
-
-    /**
-     * ÊÍ·ÅÒ»¸öÅä¶î.
+     * @param taskClass
+     * @param reserve
+     * @param elastic
      *
-     * @return false ±íÊ¾ÎŞĞ§µÄÊÍ·Å, Õı³£Çé¿öÏÂ²»Ó¦³öÏÖ, ·´Ö®Îªtrue.
+     * @throws IllegalArgumentException
      */
-    public boolean release() {
-      if (state() == value) return false;
-      if (state.incrementAndGet() <= value) return true;
-      state.decrementAndGet();
-      return false;
-    }
+    public void quota(Class<? extends Runnable> taskClass, Quota reserve, Quota elastic) {
 
-  }
-
-  /** {@link Policy} */
-  public static enum Policy {
-
-    /** ÀÖ¹Û²ßÂÔ, ÔÚ´æÔÚÎª·ÖÅäµÄÅä¶îÇé¿öÏÂ, Ò»µ©³öÏÖÏĞÖÃÏß³Ì, ÔÊĞíÈÎÎñÇÀÕ¼, ÇÀÕ¼µÄÓÅÏÈ¼¶ÓÉÌá½»µÄÏÈºóË³Ğò¾ö¶¨. */
-    OPTIMISM {
-
-      /** Î´¶¨ÒåÅä¶îµÄÈÎÎñ½«Ö±½Ó½øÈëµÈ´ı¶ÓÁĞ, µ«ÓÅÏÈ¼¶µÍÓÚËùÓĞ¶¨ÒåÁËÅä¶îµÄÈÎÎñ. */
-      private final Submitter defaultSubmitter = new Submitter() {
-        @Override
-        public void submit(Runnable task, CentralExecutor executor) { enqueue(new ComparableTask(task, Integer.MAX_VALUE)); }
-      };
-
-      @Override
-      Submitter defaultSubmitter() { return defaultSubmitter; }
-
-      @Override
-      Submitter submitter(final Quota reserve, final Quota elastic) {
-        return new Submitter() {
-          @Override
-          public void submit(final Runnable task, CentralExecutor executor) {
-            if (reserve.acquire()) doSubmit(task, executor, reserve);
-              // Èô´æÔÚÎª·ÖÅäµÄÔ¤ÁôÅä¶î, Ôòµ¯ĞÔÅä¶î½øĞĞÕùÇÀ
-            else if (executor.hasUnreserved() && elastic.acquire()) doSubmit(task, executor, elastic);
-              // Í¬±¯¹Û²ßÂÔ½øÈëµÈ´ı¶ÓÁĞ
-            else enqueue(new ComparableTask(task, reserve.value));
-          }
-        };
-      }
-    },
-
-    /** ±¯¹Û²ßÂÔ, ÔÚËùÓĞÏß³Ì¶¼±»Ô¤ÁôµÄÇé¿öÏÂ, ¼´Ê¹µ±Ç°Ô¤ÁôÖ®ÍâµÄÏß³ÌÊÇ¿ÕÏĞ, Ò²²»»á±»ÇÀÕ¼, ¼´ElasticµÄÉè¶¨½«±»ºöÂÔ. */
-    PESSIMISM {
-
-      private final Submitter defaultSubmitter = new Submitter() {
-        @Override
-        public void submit(Runnable task, CentralExecutor executor) {
-          throw new RejectedExecutionException("Unquotaed task can not be executed in pessimism.");
+        synchronized (this) {
+            if (reserve.value > threadSize - reserved) throw new IllegalArgumentException("No resource for reserve");
+            reserved += reserve.value;
         }
-      };
 
-      @Override
-      Submitter defaultSubmitter() { return defaultSubmitter; }
-
-      @Override
-      Submitter submitter(final Quota reserve, final Quota elastic) {
-        if (reserve.value == 0)
-          throw new IllegalArgumentException("None-reserve task will never be executed in pessimism.");
-
-        return new Submitter() {
-          @Override
-          public void submit(final Runnable task, CentralExecutor executor) {
-            if (reserve.acquire()) doSubmit(task, executor, reserve);
-              // ºÄ¾¡Ô¤ÁôÅä¶îºó, ½øÈëµÈ´ı¶ÓÁĞ, °´Ô¤Áô¶î¶È´óĞ¡ÅÅÓÅÏÈ¼¶, ´óÕßÓÅÏÈ.
-            else enqueue(new ComparableTask(task, reserve.value));
-          }
-        };
-      }
-    };
-
-
-    /** ÓÅÏÈ¼¶µÈ´ı¶ÓÁĞ. */
-    private final PriorityBlockingQueue<ComparableTask> queue = new PriorityBlockingQueue<ComparableTask>();
-
-    abstract Submitter submitter(Quota reserve, Quota elastic);
-
-    abstract Submitter defaultSubmitter();
-
-    /** ½«ÈÎÎñÈëµÈ´ı¶ÓÁĞ. */
-    void enqueue(ComparableTask task) {
-      queue.put(task);
-      LOGGER.debug("Enqueue {}", task.original);
+        quotas.put(taskClass, policy.submitter(reserve, elastic));
     }
 
-    /** ½«ÈÎÎñ³öÁĞÖØĞÂÌá½»¸øÖ´ĞĞÆ÷. */
-    void dequeueTo(CentralExecutor executor) {
-      try {
-        final Runnable task = queue.take().original;
-        LOGGER.debug("Dequeue {}", task);
-        executor.execute(task);
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        LOGGER.debug("Dequeue has been interrupted ", e);
-      }
-    }
+    private synchronized boolean hasUnreserved() { return threadSize > reserved; }
 
-    void doSubmit(Runnable task, CentralExecutor executor, Quota quota) {
-      executor.service.execute(new Decorator(task, quota, executor));
-    }
+    /** {@link Quota} */
+    private final static class Quota {
+        private final AtomicInteger state;
+        private final int value;
 
-    /** {@link ComparableTask} */
-    static class ComparableTask implements Comparable<ComparableTask> {
-      final Runnable original;
-      private final int quota;
-
-      public ComparableTask(Runnable task, int quota) {
-        this.original = task;
-        this.quota = quota;
-      }
-
-      @Override
-      public int compareTo(ComparableTask o) { return -(quota - o.quota); }
-    }
-
-    /** {@link Decorator} */
-    class Decorator implements Runnable {
-      private final Runnable task;
-      private final Quota quota;
-      private final CentralExecutor executor;
-
-      public Decorator(Runnable task, Quota quota, CentralExecutor executor) {
-        this.task = task;
-        this.quota = quota;
-        this.executor = executor;
-      }
-
-      @Override
-      public void run() {
-        try {
-          task.run();
-        } catch (Throwable t) {
-          LOGGER.error("Unexpected Interruption cause by", t);
-        } finally {
-          quota.release();
-          dequeueTo(executor);
+        private Quota(int value) {
+            if (value < 0) throw new IllegalArgumentException("Quota should not less than 0.");
+            this.value = value;
+            this.state = new AtomicInteger(value);
         }
-      }
-    }
-  }
 
-  /** {@link Submitter} */
-  private static interface Submitter {
-    void submit(Runnable task, CentralExecutor executor);
-  }
+        /** @return å½“å‰å‰©ä½™é…é¢. */
+        public int state() { return state.get(); }
+
+        /**
+         * å æ®ä¸€ä¸ªé…é¢.
+         *
+         * @return false è¡¨ç¤ºé¢„ç•™çš„é…é¢ä»¥ç”¨å®Œ, åä¹‹ä¸ºtrue.
+         */
+        public boolean acquire() {
+            if (state() == 0) return false;
+            if (state.decrementAndGet() >= 0) return true;
+            state.incrementAndGet();
+            return false;
+        }
+
+        /**
+         * é‡Šæ”¾ä¸€ä¸ªé…é¢.
+         *
+         * @return false è¡¨ç¤ºæ— æ•ˆçš„é‡Šæ”¾, æ­£å¸¸æƒ…å†µä¸‹ä¸åº”å‡ºç°, åä¹‹ä¸ºtrue.
+         */
+        public boolean release() {
+            if (state() == value) return false;
+            if (state.incrementAndGet() <= value) return true;
+            state.decrementAndGet();
+            return false;
+        }
+
+    }
+
+    /** {@link Policy} */
+    public static enum Policy {
+
+        /** ä¹è§‚ç­–ç•¥, åœ¨å­˜åœ¨ä¸ºåˆ†é…çš„é…é¢æƒ…å†µä¸‹, ä¸€æ—¦å‡ºç°é—²ç½®çº¿ç¨‹, å…è®¸ä»»åŠ¡æŠ¢å , æŠ¢å çš„ä¼˜å…ˆçº§ç”±æäº¤çš„å…ˆåé¡ºåºå†³å®š. */
+        OPTIMISM {
+
+            /** æœªå®šä¹‰é…é¢çš„ä»»åŠ¡å°†ç›´æ¥è¿›å…¥ç­‰å¾…é˜Ÿåˆ—, ä½†ä¼˜å…ˆçº§ä½äºæ‰€æœ‰å®šä¹‰äº†é…é¢çš„ä»»åŠ¡. */
+            private final Submitter defaultSubmitter = new Submitter() {
+                @Override
+                public void submit(Runnable task, CentralExecutor executor) { enqueue(new ComparableTask(task, Integer.MAX_VALUE)); }
+            };
+
+            @Override
+            Submitter defaultSubmitter() { return defaultSubmitter; }
+
+            @Override
+            Submitter submitter(final Quota reserve, final Quota elastic) {
+                return new Submitter() {
+                    @Override
+                    public void submit(final Runnable task, CentralExecutor executor) {
+                        if (reserve.acquire()) doSubmit(task, executor, reserve);
+                            // è‹¥å­˜åœ¨ä¸ºåˆ†é…çš„é¢„ç•™é…é¢, åˆ™å¼¹æ€§é…é¢è¿›è¡Œäº‰æŠ¢
+                        else if (executor.hasUnreserved() && elastic.acquire()) doSubmit(task, executor, elastic);
+                            // åŒæ‚²è§‚ç­–ç•¥è¿›å…¥ç­‰å¾…é˜Ÿåˆ—
+                        else enqueue(new ComparableTask(task, reserve.value));
+                    }
+                };
+            }
+        },
+
+        /** æ‚²è§‚ç­–ç•¥, åœ¨æ‰€æœ‰çº¿ç¨‹éƒ½è¢«é¢„ç•™çš„æƒ…å†µä¸‹, å³ä½¿å½“å‰é¢„ç•™ä¹‹å¤–çš„çº¿ç¨‹æ˜¯ç©ºé—², ä¹Ÿä¸ä¼šè¢«æŠ¢å , å³Elasticçš„è®¾å®šå°†è¢«å¿½ç•¥. */
+        PESSIMISM {
+
+            private final Submitter defaultSubmitter = new Submitter() {
+                @Override
+                public void submit(Runnable task, CentralExecutor executor) {
+                    throw new RejectedExecutionException("Unquotaed task can not be executed in pessimism.");
+                }
+            };
+
+            @Override
+            Submitter defaultSubmitter() { return defaultSubmitter; }
+
+            @Override
+            Submitter submitter(final Quota reserve, final Quota elastic) {
+                if (reserve.value == 0)
+                    throw new IllegalArgumentException("None-reserve task will never be executed in pessimism.");
+
+                return new Submitter() {
+                    @Override
+                    public void submit(final Runnable task, CentralExecutor executor) {
+                        if (reserve.acquire()) doSubmit(task, executor, reserve);
+                            // è€—å°½é¢„ç•™é…é¢å, è¿›å…¥ç­‰å¾…é˜Ÿåˆ—, æŒ‰é¢„ç•™é¢åº¦å¤§å°æ’ä¼˜å…ˆçº§, å¤§è€…ä¼˜å…ˆ.
+                        else enqueue(new ComparableTask(task, reserve.value));
+                    }
+                };
+            }
+        };
+
+
+        /** ä¼˜å…ˆçº§ç­‰å¾…é˜Ÿåˆ—. */
+        private final PriorityBlockingQueue<ComparableTask> queue = new PriorityBlockingQueue<ComparableTask>();
+
+        abstract Submitter submitter(Quota reserve, Quota elastic);
+
+        abstract Submitter defaultSubmitter();
+
+        /** å°†ä»»åŠ¡å…¥ç­‰å¾…é˜Ÿåˆ—. */
+        void enqueue(ComparableTask task) {
+            queue.put(task);
+            LOGGER.debug("Enqueue {}", task.original);
+        }
+
+        /** å°†ä»»åŠ¡å‡ºåˆ—é‡æ–°æäº¤ç»™æ‰§è¡Œå™¨. */
+        void dequeueTo(CentralExecutor executor) {
+            try {
+                final Runnable task = queue.take().original;
+                LOGGER.debug("Dequeue {}", task);
+                executor.execute(task);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                LOGGER.debug("Dequeue has been interrupted ", e);
+            }
+        }
+
+        void doSubmit(Runnable task, CentralExecutor executor, Quota quota) {
+            executor.service.execute(new Decorator(task, quota, executor));
+        }
+
+        /** {@link ComparableTask} */
+        static class ComparableTask implements Comparable<ComparableTask> {
+            final Runnable original;
+            private final int quota;
+
+            public ComparableTask(Runnable task, int quota) {
+                this.original = task;
+                this.quota = quota;
+            }
+
+            @Override
+            public int compareTo(ComparableTask o) { return -(quota - o.quota); }
+        }
+
+        /** {@link Decorator} */
+        class Decorator implements Runnable {
+            private final Runnable task;
+            private final Quota quota;
+            private final CentralExecutor executor;
+
+            public Decorator(Runnable task, Quota quota, CentralExecutor executor) {
+                this.task = task;
+                this.quota = quota;
+                this.executor = executor;
+            }
+
+            @Override
+            public void run() {
+                try {
+                    task.run();
+                } catch (Throwable t) {
+                    LOGGER.error("Unexpected Interruption cause by", t);
+                } finally {
+                    quota.release();
+                    dequeueTo(executor);
+                }
+            }
+        }
+    }
+
+    /** {@link Submitter} */
+    private static interface Submitter {
+        void submit(Runnable task, CentralExecutor executor);
+    }
 }
