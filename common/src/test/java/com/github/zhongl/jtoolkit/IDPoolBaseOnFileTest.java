@@ -2,6 +2,7 @@ package com.github.zhongl.jtoolkit;
 
 import java.util.BitSet;
 
+import com.github.zhongl.jtoolkit.IDPoolBaseOnFile;
 import org.junit.*;
 
 public class IDPoolBaseOnFileTest {

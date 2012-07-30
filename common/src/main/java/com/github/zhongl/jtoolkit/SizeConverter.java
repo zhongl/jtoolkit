@@ -1,14 +1,12 @@
 package com.github.zhongl.jtoolkit;
 
-import com.github.zhongl.jtoolkit.PropertiesHelper.Converter;
-
 /**
  * {@link SizeConverter}
  *
  * @author <a href=mailto:zhong.lunfu@gmail.com>zhongl</a>
  * @created 2010-12-23
  */
-public final class SizeConverter implements Converter<Integer> {
+public final class SizeConverter implements PropertiesHelper.Converter<Integer> {
 
   @Override
   public Integer convert(final String value) {

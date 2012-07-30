@@ -1,5 +1,6 @@
 package com.github.zhongl.jtoolkit;
 
+import com.github.zhongl.jtoolkit.FileExtendedAttributes;
 import org.junit.Before;
 import org.junit.Test;
 

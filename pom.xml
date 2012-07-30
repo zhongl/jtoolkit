@@ -7,6 +7,7 @@
   <version>1.0</version>
     <modules>
         <module>guards</module>
+        <module>common</module>
     </modules>
     <packaging>pom</packaging>
 
